@@ -1,0 +1,970 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>水深記録</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--navy:#0B3D6B;--blue:#1565C0;--cyan:#00B4D8;--white:#fff;--gray:#90A4AE;--text:#1A2B3C;}
+body{
+  font-family:'Hiragino Kaku Gothic Pro','Yu Gothic','Segoe UI',system-ui,sans-serif;
+  background:linear-gradient(160deg,#0B3D6B 0%,#1565C0 55%,#00B4D8 100%);
+  min-height:100vh;padding-bottom:50px;
+}
+
+
+/* HEADER */
+.hdr{background:rgba(255,255,255,0.09);backdrop-filter:blur(12px);
+     padding:13px 16px;display:flex;align-items:center;justify-content:space-between;
+     border-bottom:1px solid rgba(255,255,255,0.15);}
+.hdr-l{display:flex;align-items:center;gap:10px;}
+.hdr-icon{font-size:26px;}
+.hdr-t{color:#fff;font-size:16px;font-weight:800;}
+.hdr-s{color:rgba(255,255,255,0.55);font-size:11px;margin-top:1px;}
+.lang-btn{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);
+          color:#fff;border-radius:20px;padding:6px 13px;font-size:12px;font-weight:700;cursor:pointer;}
+
+
+/* TABS */
+.tabs{display:flex;background:rgba(255,255,255,0.1);margin:13px 13px 0;
+      border-radius:12px;padding:4px;gap:4px;}
+.tab{flex:1;padding:9px;text-align:center;color:rgba(255,255,255,0.5);
+     font-size:13px;font-weight:700;border-radius:9px;cursor:pointer;transition:all .2s;}
+.tab.active{background:#fff;color:var(--navy);}
+
+
+/* PANEL */
+.panel{background:#fff;margin:12px 13px;border-radius:18px;overflow:hidden;
+       box-shadow:0 8px 28px rgba(0,0,0,0.18);}
+.ps{padding:15px 17px;border-bottom:1px solid #EEF2F7;}
+.ps:last-child{border-bottom:none;}
+.slabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+        color:var(--cyan);margin-bottom:9px;}
+
+
+/* Date */
+.datebox{background:#E3F2FD;border-radius:11px;padding:12px 14px;
+         display:flex;align-items:center;gap:11px;}
+.date-big{font-size:15px;font-weight:800;color:var(--navy);}
+.date-sm{font-size:11px;color:var(--gray);margin-top:2px;}
+
+
+/* Depth inputs */
+.drow{display:flex;gap:10px;}
+.ig{flex:1;}
+.ig label{font-size:12px;font-weight:600;color:var(--gray);display:block;margin-bottom:5px;}
+.diw{position:relative;}
+.dinp{width:100%;padding:12px 38px 12px 10px;border:2px solid #E3EAF4;border-radius:11px;
+      font-size:28px;font-weight:900;color:var(--navy);text-align:center;outline:none;
+      background:#FAFCFF;transition:border .2s;font-family:inherit;}
+.dinp:focus{border-color:var(--cyan);}
+.ub{position:absolute;right:7px;top:50%;transform:translateY(-50%);
+    font-size:11px;font-weight:700;color:var(--gray);background:#EEF2F7;
+    padding:2px 5px;border-radius:5px;}
+
+
+/* Photo grid */
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;}
+.pthumb{aspect-ratio:1;border-radius:9px;overflow:hidden;position:relative;cursor:pointer;}
+.pthumb img{width:100%;height:100%;object-fit:cover;}
+.pthumb .del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.65);color:#fff;
+             border:none;border-radius:50%;width:22px;height:22px;font-size:13px;
+             cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;}
+.addslot{aspect-ratio:1;border-radius:9px;background:#F0F4FA;border:2px dashed #C5D0E0;
+         display:flex;flex-direction:column;align-items:center;justify-content:center;
+         cursor:pointer;color:var(--gray);font-size:11px;gap:3px;}
+.addslot span{font-size:26px;}
+#fi{display:none;}
+
+
+.noteinp{width:100%;padding:10px 12px;border:2px solid #E3EAF4;border-radius:11px;
+         font-size:14px;color:var(--text);outline:none;resize:none;
+         font-family:inherit;background:#FAFCFF;transition:border .2s;}
+.noteinp:focus{border-color:var(--cyan);}
+
+.officeinp{width:100%;padding:12px 14px;border:2px solid #E3EAF4;border-radius:11px;
+         font-size:15px;font-weight:700;color:var(--navy);outline:none;
+         font-family:inherit;background:#FAFCFF;transition:border .2s;}
+.officeinp:focus{border-color:var(--cyan);}
+
+/* Edit banner */
+.editbanner{margin:13px 13px 0;background:#FFF3E0;border:1.5px solid #FFB74D;
+            border-radius:13px;padding:11px 15px;display:flex;align-items:center;
+            justify-content:space-between;color:#E65100;font-size:13px;font-weight:700;}
+.editbanner button{background:#fff;border:1px solid #FFB74D;border-radius:8px;
+                    padding:6px 12px;font-size:12px;font-weight:700;color:#E65100;
+                    cursor:pointer;font-family:inherit;}
+
+/* History */
+.dateinp{flex:1;padding:11px 12px;border:2px solid #E3EAF4;border-radius:11px;
+         font-size:14px;color:var(--navy);font-weight:700;outline:none;
+         font-family:inherit;background:#FAFCFF;}
+.dateinp:focus{border-color:var(--cyan);}
+.clearbtn{width:42px;border:2px solid #E3EAF4;border-radius:11px;background:#FAFCFF;
+          color:var(--gray);font-size:16px;font-weight:700;cursor:pointer;}
+.hist-card{background:#fff;border-radius:15px;padding:14px 15px;margin-bottom:10px;
+           box-shadow:0 4px 16px rgba(0,0,0,0.12);display:flex;align-items:center;
+           justify-content:space-between;gap:10px;cursor:pointer;}
+.hist-main{flex:1;min-width:0;}
+.hist-date{font-size:12px;font-weight:800;color:var(--navy);}
+.hist-meta{font-size:11px;color:var(--gray);margin-top:3px;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-depth{font-size:21px;font-weight:900;color:var(--blue);margin-top:5px;}
+.hist-actions{display:flex;gap:6px;flex-shrink:0;}
+.hist-btn{background:#F0F4FA;border:none;border-radius:9px;width:36px;height:36px;
+          font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.hist-btn.del{background:#FFEBEE;}
+
+
+/* Gen button */
+.genbtn{margin:0 13px 12px;width:calc(100% - 26px);padding:15px;
+        background:linear-gradient(135deg,var(--navy),var(--blue));color:#fff;
+        border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;
+        box-shadow:0 4px 16px rgba(11,61,107,0.4);font-family:inherit;}
+.genbtn:active{transform:scale(0.98);}
+
+
+/* PREVIEW */
+.prev-wrap{margin:12px 13px 0;border-radius:18px;overflow:hidden;
+           box-shadow:0 8px 28px rgba(0,0,0,0.22);}
+
+
+/* REPORT CARD (html2canvas target) */
+.rc-card{width:750px;min-height:1040px;display:flex;flex-direction:column;background:#fff;}
+
+.rc-header{background:linear-gradient(135deg,#0B3D6B 0%,#1565C0 60%,#1976D2 100%);
+           padding:40px 36px 34px;position:relative;overflow:hidden;}
+.rc-header::before{content:'';position:absolute;top:-30px;right:-30px;
+  width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,0.07);}
+.rc-header::after{content:'';position:absolute;bottom:-40px;left:20px;
+  width:110px;height:110px;border-radius:50%;background:rgba(0,180,216,0.15);}
+.rc-office{color:#fff;font-size:30px;font-weight:900;letter-spacing:.5px;
+            margin-bottom:8px;position:relative;z-index:1;}
+.rc-org{color:rgba(255,255,255,0.65);font-size:13px;font-weight:700;
+        text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;
+        position:relative;z-index:1;}
+.rc-title2{color:#fff;font-size:23px;font-weight:900;line-height:1.35;
+           margin-bottom:22px;position:relative;z-index:1;}
+.rc-title2 small{display:block;font-size:13px;font-weight:700;
+                 color:rgba(255,255,255,0.7);margin-top:2px;}
+.rc-datebox{display:inline-flex;align-items:center;gap:10px;
+            background:rgba(255,255,255,0.16);border:1.5px solid rgba(255,255,255,0.35);
+            border-radius:14px;padding:12px 22px;position:relative;z-index:1;}
+.rc-date-ico{font-size:22px;}
+.rc-date-txt{color:#fff;font-size:21px;font-weight:800;}
+
+.rc-body{flex:1;display:flex;flex-direction:column;align-items:center;
+         justify-content:center;padding:46px 38px;background:#fff;}
+
+/* BIG measurement */
+.mhero{width:100%;background:linear-gradient(135deg,#E3F2FD,#EBF5FF);
+       border:2px solid #BBDEFB;border-radius:22px;padding:38px 20px 32px;
+       text-align:center;position:relative;overflow:hidden;}
+.mhero::after{content:'〰〰';position:absolute;bottom:6px;right:14px;
+              font-size:46px;color:rgba(0,180,216,0.12);letter-spacing:-6px;}
+.mhero-lbl{font-size:14px;font-weight:700;text-transform:uppercase;
+           letter-spacing:2px;color:var(--blue);margin-bottom:16px;}
+.mhero-val{display:flex;align-items:baseline;justify-content:center;gap:4px;line-height:1;}
+.mhero-n{font-size:140px;font-weight:900;color:var(--navy);letter-spacing:-6px;}
+.mhero-m{font-size:48px;font-weight:700;color:var(--blue);margin-right:18px;}
+.mhero-cn{font-size:84px;font-weight:900;color:#1976D2;letter-spacing:-3px;}
+.mhero-cm{font-size:34px;font-weight:700;color:var(--blue);}
+
+/* Time block */
+.rc-timebox{margin-top:34px;width:100%;background:linear-gradient(135deg,var(--navy),var(--blue));
+            border-radius:18px;padding:22px 20px;text-align:center;}
+.rc-time-lbl{color:rgba(255,255,255,0.65);font-size:13px;font-weight:700;
+             text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;}
+.rc-time-val{color:#fff;font-size:40px;font-weight:900;letter-spacing:1px;}
+
+/* Notes (only shown if filled in) */
+.rnotes{margin-top:26px;width:100%;background:#FFF8E1;border-left:4px solid #FFC107;
+        border-radius:0 10px 10px 0;padding:14px 16px;}
+.rnl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+     color:#F9A825;margin-bottom:4px;}
+.rnt{font-size:15px;color:#5D4037;line-height:1.5;}
+
+/* Photo count / status chips */
+.chiprow2{display:flex;gap:12px;margin-top:22px;width:100%;}
+.chip2{flex:1;background:#F5F8FF;border-radius:14px;padding:16px 8px;
+       text-align:center;border:1.5px solid #E3EAF4;}
+.cl2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+     color:var(--gray);margin-bottom:6px;}
+.cv2{font-size:17px;font-weight:800;color:var(--navy);}
+
+
+/* Photo strip preview (visible only, not in PDF report page) */
+.photo-strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;
+             scrollbar-width:none;}
+.photo-strip::-webkit-scrollbar{display:none;}
+.strip-img{flex:0 0 80px;height:80px;border-radius:8px;object-fit:cover;
+           border:2px solid rgba(255,255,255,0.3);cursor:pointer;}
+
+
+/* ACTION BUTTONS */
+.actrow{display:flex;gap:10px;margin:10px 13px 0;}
+.abtn{flex:1;padding:14px 8px;border:none;border-radius:13px;font-size:14px;
+      font-weight:800;cursor:pointer;display:flex;align-items:center;
+      justify-content:center;gap:6px;font-family:inherit;}
+.abtn:active{transform:scale(0.97);}
+.asave{background:linear-gradient(135deg,#37474F,#212121);color:#fff;
+       box-shadow:0 4px 14px rgba(0,0,0,0.3);}
+.aline{background:linear-gradient(135deg,#00C300,#009A00);color:#fff;
+       box-shadow:0 4px 14px rgba(0,160,0,0.35);font-size:15px;}
+.backbtn{margin:10px 13px 0;width:calc(100% - 26px);padding:12px;
+         background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.25);
+         border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;
+         text-align:center;font-family:inherit;}
+
+
+/* Info box */
+.infobox{margin:10px 13px 0;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);
+         border-radius:12px;padding:11px 14px;color:rgba(255,255,255,0.8);font-size:12px;
+         line-height:1.6;text-align:center;}
+
+
+/* Lightbox */
+.lb{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:9000;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;}
+.lb img{max-width:96vw;max-height:80vh;border-radius:10px;object-fit:contain;}
+.lb-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);
+          color:#fff;border:none;border-radius:50%;width:40px;height:40px;
+          font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.lb-nav{display:flex;gap:16px;margin-top:16px;}
+.lb-navbtn{background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;
+           padding:9px 20px;font-size:14px;font-weight:700;cursor:pointer;}
+.lb-cnt{color:rgba(255,255,255,0.55);font-size:12px;margin-top:8px;}
+
+
+/* Progress overlay */
+.prog-overlay{position:fixed;inset:0;background:rgba(11,61,107,0.88);
+              z-index:8000;display:flex;flex-direction:column;
+              align-items:center;justify-content:center;gap:16px;}
+.prog-box{background:#fff;border-radius:18px;padding:28px 32px;text-align:center;
+          width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.3);}
+.prog-icon{font-size:40px;margin-bottom:10px;}
+.prog-title{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px;}
+.prog-sub{font-size:12px;color:var(--gray);}
+.prog-bar-wrap{background:#E3EAF4;border-radius:10px;height:8px;margin-top:14px;overflow:hidden;}
+.prog-bar{background:linear-gradient(90deg,var(--navy),var(--cyan));
+          height:100%;border-radius:10px;transition:width .3s;width:0%;}
+
+
+.hidden{display:none!important;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(100px);
+       background:#1A2B3C;color:#fff;padding:11px 20px;border-radius:30px;
+       font-size:13px;font-weight:600;transition:transform .3s;z-index:9999;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+
+/* Off-screen render */
+#renderArea{position:fixed;left:-2000px;top:0;width:750px;background:#fff;z-index:-1;pointer-events:none;}
+</style>
+</head>
+<body>
+
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="hdr-icon">💧</div>
+    <div>
+      <div class="hdr-t">水深記録 / Water Report</div>
+      <div class="hdr-s">現場計測ツール · Field Tool</div>
+    </div>
+  </div>
+  <button class="lang-btn" onclick="toggleLang()">🌐 <span id="langLabel">EN</span></button>
+</div>
+
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" id="tab0" onclick="switchTab('form')">📋 <span class="t" data-ja="記録" data-en="Record">記録</span></div>
+  <div class="tab" id="tab1" onclick="switchTab('preview')">📄 <span class="t" data-ja="レポート" data-en="Report">レポート</span></div>
+  <div class="tab" id="tab2" onclick="switchTab('history')">🗂️ <span class="t" data-ja="履歴" data-en="History">履歴</span></div>
+</div>
+
+
+<!-- ═══ FORM ═══ -->
+<div id="formView">
+<div class="editbanner hidden" id="editBanner">
+  <span>✏️ <span class="t" data-ja="記録を編集中" data-en="Editing record">記録を編集中</span></span>
+  <button onclick="cancelEdit()"><span class="t" data-ja="キャンセル" data-en="Cancel">キャンセル</span></button>
+</div>
+<div class="panel">
+  <div class="ps">
+    <div class="slabel">🏢 <span class="t" data-ja="事業所名" data-en="Office Name">事業所名</span></div>
+    <input type="text" class="officeinp" id="officeName" placeholder="例：〇〇建設株式会社 / e.g. ABC Construction Co.">
+  </div>
+  <div class="ps">
+    <div class="slabel">📅 <span class="t" data-ja="計測日時" data-en="Date & Time">計測日時</span></div>
+    <div class="datebox">
+      <div style="font-size:24px">🗓️</div>
+      <div>
+        <div class="date-big" id="dateDisplay">--</div>
+        <div class="date-sm" id="timeDisplay">--</div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="ps">
+    <div class="slabel">📏 <span class="t" data-ja="水深" data-en="Water Depth">水深</span></div>
+    <div class="drow">
+      <div class="ig">
+        <label class="t" data-ja="メートル" data-en="Meters">メートル</label>
+        <div class="diw">
+          <input type="number" class="dinp" id="meters" placeholder="0" min="0" max="99" inputmode="numeric">
+          <span class="ub">m</span>
+        </div>
+      </div>
+      <div class="ig">
+        <label class="t" data-ja="センチ" data-en="Centimeters">センチ</label>
+        <div class="diw">
+          <input type="number" class="dinp" id="centimeters" placeholder="00" min="0" max="99" inputmode="numeric">
+          <span class="ub">cm</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="ps">
+    <div class="slabel">📸 <span class="t" data-ja="スケール写真" data-en="Scale Photos">スケール写真</span></div>
+    <div class="pgrid" id="photoGrid">
+      <div class="addslot" onclick="document.getElementById('fi').click()">
+        <span>+</span>
+        <div class="t" data-ja="写真追加" data-en="Add Photo">写真追加</div>
+      </div>
+    </div>
+    <input type="file" id="fi" accept="image/*" multiple capture="environment">
+  </div>
+
+
+  <div class="ps">
+    <div class="slabel">📝 <span class="t" data-ja="備考（任意）" data-en="Notes (Optional)">備考（任意）</span></div>
+    <textarea class="noteinp" id="notes" rows="2"
+      placeholder="例：雨天のため水位やや高め / e.g. Slightly high due to rain"></textarea>
+  </div>
+</div>
+<button class="genbtn" onclick="generateReport()">
+  ✨ <span class="t" data-ja="レポートを作成" data-en="Generate Report">レポートを作成</span>
+</button>
+</div>
+
+
+<!-- ═══ PREVIEW ═══ -->
+<div id="previewView" class="hidden">
+
+
+  <!-- Visual preview card -->
+  <div class="prev-wrap" id="previewWrap"></div>
+
+
+  <!-- Photo strip -->
+  <div id="photoStripWrap" class="hidden" style="margin:10px 13px 0;">
+    <div style="color:rgba(255,255,255,0.65);font-size:11px;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">
+      📸 <span class="t" data-ja="写真プレビュー（タップで拡大）" data-en="Photos (tap to enlarge)">写真プレビュー（タップで拡大）</span>
+    </div>
+    <div class="photo-strip" id="photoStrip"></div>
+  </div>
+
+
+  <div class="actrow">
+    <button class="abtn asave" id="saveBtn" onclick="doSavePDF()">
+      📄 <span class="t" data-ja="PDF保存" data-en="Save PDF">PDF保存</span>
+    </button>
+    <button class="abtn aline" id="lineBtn" onclick="doSendLine()">
+      💚 LINE <span class="t" data-ja="送信" data-en="Send">送信</span>
+    </button>
+  </div>
+
+
+  <div class="infobox">
+    💡 <span class="t" data-ja="PDFにはレポート＋全写真が含まれます。LINEで1つのファイルとして送信できます。" data-en="PDF includes report + all photos. Send as one file via LINE.">PDFにはレポート＋全写真が含まれます。LINEで1つのファイルとして送信できます。</span>
+  </div>
+
+
+  <button class="backbtn" onclick="switchTab('form')">
+    ← <span class="t" data-ja="編集に戻る" data-en="Back to Edit">編集に戻る</span>
+  </button>
+</div>
+
+
+<!-- ═══ HISTORY ═══ -->
+<div id="historyView" class="hidden">
+  <div class="panel" style="margin:12px 13px;">
+    <div class="ps">
+      <div class="slabel">🔍 <span class="t" data-ja="日付で絞り込み" data-en="Filter by Date">日付で絞り込み</span></div>
+      <div style="display:flex;gap:8px;">
+        <input type="date" class="dateinp" id="historyDateFilter" onchange="renderHistoryList()">
+        <button class="clearbtn" onclick="clearHistoryFilter()">✕</button>
+      </div>
+    </div>
+  </div>
+  <div id="historyList" style="margin:0 13px 12px;"></div>
+  <div class="infobox hidden" id="historyEmpty">📭 <span class="t" data-ja="記録がありません" data-en="No records yet">記録がありません</span></div>
+  <div class="infobox">
+    💡 <span class="t" data-ja="記録はこの端末のブラウザに保存されます。ブラウザのデータを消去すると記録も削除されます。" data-en="Records are saved in this device's browser. Clearing browser data will delete them.">記録はこの端末のブラウザに保存されます。ブラウザのデータを消去すると記録も削除されます。</span>
+  </div>
+</div>
+
+
+<!-- Off-screen render area -->
+<div id="renderArea"></div>
+
+
+<!-- Lightbox -->
+<div class="lb hidden" id="lb">
+  <button class="lb-close" onclick="closeLb()">✕</button>
+  <img id="lbImg" src="" alt="">
+  <div class="lb-nav">
+    <button class="lb-navbtn" onclick="lbNav(-1)">◀ 前</button>
+    <button class="lb-navbtn" onclick="lbNav(1)">次 ▶</button>
+  </div>
+  <div class="lb-cnt" id="lbCnt"></div>
+</div>
+
+
+<!-- Progress overlay -->
+<div class="prog-overlay hidden" id="progOverlay">
+  <div class="prog-box">
+    <div class="prog-icon">📄</div>
+    <div class="prog-title" id="progTitle">PDFを作成中...</div>
+    <div class="prog-sub" id="progSub">しばらくお待ちください</div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="progBar"></div></div>
+  </div>
+</div>
+
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+let lang='ja', photos=[], lbPhotos=[], lbIdx=0, reportData={};
+let currentEditId=null;
+const STORAGE_KEY='waterDepthReports';
+
+
+/* ── Lang ── */
+function toggleLang(){
+  lang=lang==='ja'?'en':'ja';
+  document.getElementById('langLabel').textContent=lang==='ja'?'EN':'JP';
+  document.querySelectorAll('.t').forEach(el=>{
+    el.textContent=lang==='ja'?el.dataset.ja:el.dataset.en;
+  });
+  updateDateTime();
+}
+
+
+/* ── DateTime ── */
+function updateDateTime(){
+  const now=new Date();
+  const dJa=now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+  const dEn=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const t=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dateDisplay').textContent=lang==='ja'?dJa:dEn;
+  document.getElementById('timeDisplay').textContent=`⏰ ${t}`;
+}
+updateDateTime();
+setInterval(updateDateTime,30000);
+
+
+/* ── Tabs ── */
+function switchTab(tab){
+  document.getElementById('tab0').classList.toggle('active',tab==='form');
+  document.getElementById('tab1').classList.toggle('active',tab==='preview');
+  document.getElementById('tab2').classList.toggle('active',tab==='history');
+  document.getElementById('formView').classList.toggle('hidden',tab!=='form');
+  document.getElementById('previewView').classList.toggle('hidden',tab!=='preview');
+  document.getElementById('historyView').classList.toggle('hidden',tab!=='history');
+  if(tab==='history') renderHistoryList();
+}
+
+
+/* ── Photos ── */
+document.getElementById('fi').addEventListener('change',function(e){
+  Array.from(e.target.files).forEach(file=>{
+    if(photos.length>=6)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      resizeImage(ev.target.result,1280,0.82).then(resized=>{
+        photos.push(resized);renderPhotoGrid();
+      });
+    };
+    r.readAsDataURL(file);
+  });
+  this.value='';
+});
+function resizeImage(dataUrl,maxDim,quality){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>maxDim||h>maxDim){
+        if(w>h){h=Math.round(h*maxDim/w);w=maxDim;}
+        else{w=Math.round(w*maxDim/h);h=maxDim;}
+      }
+      const c=document.createElement('canvas');
+      c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      resolve(c.toDataURL('image/jpeg',quality));
+    };
+    img.onerror=()=>resolve(dataUrl);
+    img.src=dataUrl;
+  });
+}
+function renderPhotoGrid(){
+  const g=document.getElementById('photoGrid');g.innerHTML='';
+  photos.forEach((src,i)=>{
+    const d=document.createElement('div');d.className='pthumb';
+    d.innerHTML=`<img src="${src}" onclick="openLb(photos,${i})"><button class="del" onclick="event.stopPropagation();delPhoto(${i})">✕</button>`;
+    g.appendChild(d);
+  });
+  if(photos.length<6){
+    const a=document.createElement('div');a.className='addslot';
+    a.onclick=()=>document.getElementById('fi').click();
+    a.innerHTML=`<span>+</span><div>${lang==='ja'?'写真追加':'Add Photo'}</div>`;
+    g.appendChild(a);
+  }
+}
+function delPhoto(i){photos.splice(i,1);renderPhotoGrid();}
+
+
+/* ── Lightbox ── */
+function openLb(arr,i){lbPhotos=arr||[];lbIdx=i;showLb();}
+function showLb(){
+  document.getElementById('lbImg').src=lbPhotos[lbIdx];
+  document.getElementById('lbCnt').textContent=`${lbIdx+1} / ${lbPhotos.length}`;
+  document.getElementById('lb').classList.remove('hidden');
+}
+function closeLb(){document.getElementById('lb').classList.add('hidden');}
+function lbNav(d){lbIdx=(lbIdx+d+lbPhotos.length)%lbPhotos.length;showLb();}
+document.getElementById('lb').addEventListener('click',function(e){if(e.target===this)closeLb();});
+
+
+/* ── Build report HTML (for canvas render) ── */
+function buildReportHTML(officeName,m,cm,dateStr,timeStr,notes,photoCount){
+  const hasCm=cm&&parseInt(cm)>0;
+  let notesHTML='';
+  if(notes) notesHTML=`<div class="rnotes"><div class="rnl">📝 備考 · Notes</div><div class="rnt">${notes}</div></div>`;
+  const officeHTML=officeName?`<div class="rc-office">🏢 ${officeName}</div>`:'';
+
+  return `
+    <div class="rc-card">
+      <div class="rc-header">
+        ${officeHTML}
+        <div class="rc-org">現場日報 · Field Daily Report</div>
+        <div class="rc-title2">水深計測レポート<small>Water Depth Measurement Report</small></div>
+        <div class="rc-datebox">
+          <span class="rc-date-ico">📅</span>
+          <span class="rc-date-txt">${dateStr}</span>
+        </div>
+      </div>
+      <div class="rc-body">
+        <div class="mhero">
+          <div class="mhero-lbl">💧 計測水深 · Recorded Depth</div>
+          <div class="mhero-val">
+            <span class="mhero-n">${m||'0'}</span><span class="mhero-m">m</span>
+            ${hasCm?`<span class="mhero-cn">${cm}</span><span class="mhero-cm">cm</span>`:''}
+          </div>
+        </div>
+        <div class="rc-timebox">
+          <div class="rc-time-lbl">⏰ 計測時刻 · Time</div>
+          <div class="rc-time-val">${timeStr}</div>
+        </div>
+        <div class="chiprow2">
+          <div class="chip2"><div class="cl2">写真枚数</div><div class="cv2">${photoCount?photoCount+'枚':'なし'}</div></div>
+          <div class="chip2"><div class="cl2">ステータス</div><div class="cv2" style="color:#00897B">✔ 完了</div></div>
+        </div>
+        ${notesHTML}
+      </div>
+    </div>`;
+}
+
+
+/* ── Local storage (records persist on this device until deleted) ── */
+function loadAllRecords(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    return raw?JSON.parse(raw):[];
+  }catch(e){console.error(e);return [];}
+}
+function saveAllRecords(arr){
+  try{
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(arr));
+    return true;
+  }catch(e){
+    console.error(e);
+    showToast('⚠️ 保存容量がいっぱいです / Storage full');
+    return false;
+  }
+}
+function upsertRecord(rec){
+  const all=loadAllRecords();
+  const idx=all.findIndex(r=>r.id===rec.id);
+  if(idx>=0) all[idx]=rec; else all.unshift(rec);
+  saveAllRecords(all);
+}
+function deleteRecordById(id){
+  const all=loadAllRecords().filter(r=>r.id!==id);
+  saveAllRecords(all);
+}
+
+
+/* ── Generate / Save record ── */
+function generateReport(){
+  const officeName=document.getElementById('officeName').value.trim();
+  const m=document.getElementById('meters').value.trim();
+  const cm=document.getElementById('centimeters').value.trim();
+  if(!m&&!cm){showToast('⚠️ 水深を入力してください');return;}
+
+
+  const notes=document.getElementById('notes').value.trim();
+  let isoDate,dateStr,timeStr,id,createdAt;
+
+  if(currentEditId){
+    const existing=loadAllRecords().find(r=>r.id===currentEditId);
+    id=currentEditId;
+    isoDate=existing?existing.isoDate:new Date().toISOString().slice(0,10);
+    dateStr=existing?existing.dateStr:'';
+    timeStr=existing?existing.timeStr:'';
+    createdAt=existing?existing.createdAt:Date.now();
+  } else {
+    const now=new Date();
+    id='r'+Date.now();
+    isoDate=now.toISOString().slice(0,10);
+    dateStr=now.toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'short'});
+    timeStr=now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+    createdAt=Date.now();
+  }
+
+  reportData={id,isoDate,officeName,m,cm,dateStr,timeStr,notes,photos:[...photos],createdAt};
+  upsertRecord(reportData);
+  currentEditId=null;
+  hideEditBanner();
+
+
+  // Render preview
+  document.getElementById('previewWrap').innerHTML=buildReportHTML(officeName,m,cm,dateStr,timeStr,notes,photos.length);
+
+
+  // Photo strip
+  const strip=document.getElementById('photoStrip');
+  const stripWrap=document.getElementById('photoStripWrap');
+  strip.innerHTML='';
+  if(photos.length>0){
+    photos.forEach((src,i)=>{
+      const img=document.createElement('img');
+      img.className='strip-img';img.src=src;
+      img.onclick=()=>openLb(photos,i);
+      strip.appendChild(img);
+    });
+    stripWrap.classList.remove('hidden');
+  } else {
+    stripWrap.classList.add('hidden');
+  }
+
+
+  switchTab('preview');
+  showToast('✅ レポートを作成しました');
+}
+
+
+/* ── History list ── */
+function renderHistoryList(){
+  const filterEl=document.getElementById('historyDateFilter');
+  const filter=filterEl?filterEl.value:'';
+  let all=loadAllRecords();
+  if(filter) all=all.filter(r=>r.isoDate===filter);
+  all.sort((a,b)=>{
+    if(a.isoDate!==b.isoDate) return b.isoDate.localeCompare(a.isoDate);
+    return (b.createdAt||0)-(a.createdAt||0);
+  });
+
+  const listEl=document.getElementById('historyList');
+  const emptyEl=document.getElementById('historyEmpty');
+  listEl.innerHTML='';
+
+  if(all.length===0){
+    emptyEl.classList.remove('hidden');
+    return;
+  }
+  emptyEl.classList.add('hidden');
+
+  all.forEach(rec=>{
+    const photoCount=rec.photos?rec.photos.length:0;
+    const card=document.createElement('div');
+    card.className='hist-card';
+    card.onclick=()=>viewRecord(rec.id);
+    card.innerHTML=`
+      <div class="hist-main">
+        <div class="hist-date">📅 ${rec.dateStr} · ${rec.timeStr}</div>
+        <div class="hist-meta">${rec.officeName?'🏢 '+rec.officeName+' · ':''}📸 ${photoCount?photoCount+'枚':'なし'}</div>
+        <div class="hist-depth">💧 ${rec.m||'0'}m${rec.cm&&parseInt(rec.cm)>0?' '+rec.cm+'cm':''}</div>
+      </div>
+      <div class="hist-actions">
+        <button class="hist-btn" onclick="event.stopPropagation();editRecord('${rec.id}')">✏️</button>
+        <button class="hist-btn del" onclick="event.stopPropagation();deleteRecordPrompt('${rec.id}')">🗑️</button>
+      </div>`;
+    listEl.appendChild(card);
+  });
+}
+function clearHistoryFilter(){
+  document.getElementById('historyDateFilter').value='';
+  renderHistoryList();
+}
+
+
+/* ── View / Edit / Delete a saved record ── */
+function viewRecord(id){
+  const rec=loadAllRecords().find(r=>r.id===id);
+  if(!rec)return;
+  reportData=rec;
+  document.getElementById('previewWrap').innerHTML=
+    buildReportHTML(rec.officeName,rec.m,rec.cm,rec.dateStr,rec.timeStr,rec.notes,(rec.photos||[]).length);
+
+  const strip=document.getElementById('photoStrip');
+  const stripWrap=document.getElementById('photoStripWrap');
+  strip.innerHTML='';
+  if(rec.photos&&rec.photos.length>0){
+    rec.photos.forEach((src,i)=>{
+      const img=document.createElement('img');
+      img.className='strip-img';img.src=src;
+      img.onclick=()=>openLb(rec.photos,i);
+      strip.appendChild(img);
+    });
+    stripWrap.classList.remove('hidden');
+  } else {
+    stripWrap.classList.add('hidden');
+  }
+  switchTab('preview');
+}
+
+function editRecord(id){
+  const rec=loadAllRecords().find(r=>r.id===id);
+  if(!rec)return;
+  document.getElementById('officeName').value=rec.officeName||'';
+  document.getElementById('meters').value=rec.m||'';
+  document.getElementById('centimeters').value=rec.cm||'';
+  document.getElementById('notes').value=rec.notes||'';
+  photos=[...(rec.photos||[])];
+  renderPhotoGrid();
+  currentEditId=rec.id;
+  showEditBanner();
+  switchTab('form');
+  showToast('✏️ 編集モードになりました');
+}
+
+function deleteRecordPrompt(id){
+  const msg=lang==='ja'?'この記録を削除しますか？':'Delete this record?';
+  if(!confirm(msg))return;
+  deleteRecordById(id);
+  renderHistoryList();
+  showToast('🗑️ 削除しました');
+}
+
+function showEditBanner(){document.getElementById('editBanner').classList.remove('hidden');}
+function hideEditBanner(){document.getElementById('editBanner').classList.add('hidden');}
+function cancelEdit(){
+  currentEditId=null;
+  hideEditBanner();
+  document.getElementById('officeName').value='';
+  document.getElementById('meters').value='';
+  document.getElementById('centimeters').value='';
+  document.getElementById('notes').value='';
+  photos=[];
+  renderPhotoGrid();
+  showToast(lang==='ja'?'編集をキャンセルしました':'Edit cancelled');
+}
+
+
+/* ── Progress ── */
+function setProgress(title,sub,pct){
+  document.getElementById('progTitle').textContent=title;
+  document.getElementById('progSub').textContent=sub;
+  document.getElementById('progBar').style.width=pct+'%';
+}
+function showProgress(title){
+  document.getElementById('progTitle').textContent=title;
+  document.getElementById('progBar').style.width='0%';
+  document.getElementById('progOverlay').classList.remove('hidden');
+}
+function hideProgress(){document.getElementById('progOverlay').classList.add('hidden');}
+
+
+/* ── Make PDF ── */
+async function makePDF(){
+  const {jsPDF}=window.jspdf;
+  const d=reportData;
+
+
+  showProgress('PDFを作成中... / Creating PDF...');
+  setProgress('レポートページを生成中','Please wait...', 10);
+
+
+  // 1. Render report card to canvas
+  const area=document.getElementById('renderArea');
+  area.innerHTML=`<div id="_rc" style="background:#fff;font-family:'Hiragino Kaku Gothic Pro','Yu Gothic','Segoe UI',system-ui,sans-serif;">${buildReportHTML(d.officeName,d.m,d.cm,d.dateStr,d.timeStr,d.notes,(d.photos||[]).length)}</div>`;
+
+
+  // Copy styles needed
+  const styleEl=document.createElement('style');
+  styleEl.textContent=document.querySelector('style').textContent;
+  area.prepend(styleEl);
+
+
+  const rc=document.getElementById('_rc');
+  await waitImgs(rc);
+
+
+  const canvas1=await html2canvas(rc,{scale:2,useCORS:true,allowTaint:true,backgroundColor:'#fff',logging:false});
+  area.innerHTML='';
+
+
+  setProgress('写真を処理中...','Processing photos...', 40);
+
+
+  // 2. Create PDF (A4)
+  const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297;
+
+
+  // Page 1: report
+  const r1=canvas1.width/canvas1.height;
+  const imgH1=Math.min(H-20, W/r1);
+  const marginTop=(H-imgH1)/2;
+  pdf.addImage(canvas1.toDataURL('image/jpeg',0.95),'JPEG',0,marginTop>10?10:0,W,imgH1);
+
+
+  // Pages 2+: each photo full page
+  for(let i=0;i<d.photos.length;i++){
+    setProgress(`写真 ${i+1}/${d.photos.length} を追加中`,`Adding photo ${i+1}`, 40+((i+1)/d.photos.length)*50);
+    pdf.addPage();
+
+
+    // Draw photo label
+    pdf.setFillColor(11,61,107);
+    pdf.rect(0,0,W,14,'F');
+    pdf.setTextColor(255,255,255);
+    pdf.setFontSize(10);
+    pdf.text(`📸 スケール写真 ${i+1}/${d.photos.length}  ·  ${d.dateStr}  ·  ${d.m||'0'}m${d.cm&&parseInt(d.cm)>0?' '+d.cm+'cm':''}`,5,9);
+
+
+    // Add photo (fit to page, keep aspect)
+    const imgEl=await loadImg(d.photos[i]);
+    const photoCanvas=document.createElement('canvas');
+    photoCanvas.width=imgEl.width;photoCanvas.height=imgEl.height;
+    photoCanvas.getContext('2d').drawImage(imgEl,0,0);
+    const ratio=imgEl.width/imgEl.height;
+    const maxW=W-10, maxH=H-22;
+    let pw=maxW,ph=maxW/ratio;
+    if(ph>maxH){ph=maxH;pw=maxH*ratio;}
+    const ox=(W-pw)/2;
+    pdf.addImage(photoCanvas.toDataURL('image/jpeg',0.92),'JPEG',ox,16,pw,ph);
+  }
+
+
+  setProgress('完了!','Done!',100);
+  await sleep(300);
+  hideProgress();
+  return pdf;
+}
+
+
+function loadImg(src){
+  return new Promise(res=>{
+    const img=new Image();img.onload=()=>res(img);img.src=src;
+  });
+}
+function waitImgs(el){
+  const imgs=el.querySelectorAll('img');
+  return Promise.all(Array.from(imgs).map(img=>
+    img.complete?Promise.resolve():new Promise(r=>{img.onload=r;img.onerror=r;})
+  ));
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+
+/* ── Filename (always today's date, never random) ── */
+function getReportFilename(){
+  const now=new Date();
+  const y=now.getFullYear();
+  const mo=String(now.getMonth()+1).padStart(2,'0');
+  const da=String(now.getDate()).padStart(2,'0');
+  return `水深記録_${y}${mo}${da}.pdf`;
+}
+
+
+/* ── Save PDF ── */
+async function doSavePDF(){
+  const btn=document.getElementById('saveBtn');
+  btn.disabled=true;
+  try{
+    const pdf=await makePDF();
+    const fname=getReportFilename();
+    const blob=pdf.output('blob');
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=fname;a.rel='noopener';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    showToast('✅ PDF保存完了！');
+  }catch(e){console.error(e);showToast('❌ エラーが発生しました');}
+  btn.disabled=false;
+}
+
+
+/* ── Send to LINE ── */
+async function doSendLine(){
+  const btn=document.getElementById('lineBtn');
+  btn.disabled=true;
+  try{
+    const pdf=await makePDF();
+    const fname=getReportFilename();
+
+
+    const pdfBlob=pdf.output('blob');
+    const file=new File([pdfBlob],fname,{type:'application/pdf'});
+
+
+    // Try Web Share API → opens native share sheet → pick LINE
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:'水深計測レポート'});
+      showToast('✅ LINE共有完了！');
+    } else {
+      // Fallback: download PDF + open LINE app
+      const url=URL.createObjectURL(pdfBlob);
+      const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+      setTimeout(()=>{
+        // Try LINE app directly
+        const lineScheme='line://';
+        const iframe=document.createElement('iframe');
+        iframe.style.display='none';iframe.src=lineScheme;
+        document.body.appendChild(iframe);
+        setTimeout(()=>{iframe.remove();},2000);
+        showToast('💡 PDFを保存しました。LINEを開いて添付してください。');
+      },600);
+    }
+  }catch(e){
+    if(e.name!=='AbortError'){console.error(e);showToast('❌ エラーが発生しました');}
+  }
+  btn.disabled=false;
+}
+
+
+/* ── Toast ── */
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+</body>
+</html>
+
